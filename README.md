@@ -34,7 +34,7 @@ Each stage feeds its output into the next, so the final report is grounded in re
 | Agent framework | [LangChain](https://python.langchain.com) |
 | LLM | [Groq](https://groq.com) (via `langchain-groq`) |
 | Search | [Tavily](https://tavily.com) (via `langchain-tavily`) |
-| Scraping | LangChain Reader / web scraper tool |
+| Scraping | BeautifulSoup |
 
 ---
 
