@@ -10,14 +10,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Model Setup
-
-llm = ChatGroq(model = 'llama-3.3-70b-versatile', temperature = 0)
+agent_llm = ChatGroq(model='llama-3.3-70b-versatile', temperature=0)
+fast_llm   = ChatGroq(model='llama-3.1-8b-instant',   temperature=0)
 
 # First Agent
 
 def build_search_agent():
   return create_agent(
-    model = llm,
+    model = agent_llm,
     tools = [web_search]
   )
   
@@ -25,7 +25,7 @@ def build_search_agent():
 
 def build_reader_agent():
   return create_agent(
-    model = llm,
+    model = agent_llm,
     tools = [scrape_url]
   )
   
@@ -51,7 +51,7 @@ writer_prompt = ChatPromptTemplate.from_messages([
   """)
 ])
 
-writer_chain = writer_prompt | llm | StrOutputParser()
+writer_chain = writer_prompt | fast_llm | StrOutputParser()
 
 # Critic Chain
 
@@ -80,5 +80,5 @@ critic_prompt = ChatPromptTemplate.from_messages([
   """)
 ])
 
-critic_chain = critic_prompt | llm | StrOutputParser()
+critic_chain = critic_prompt | fast_llm | StrOutputParser()
 
