@@ -597,8 +597,9 @@ if st.session_state.running and not st.session_state.done:
         rr = reader_agent.invoke({
             "messages": [("user",
                 f"Based on the following search results about '{topic_val}', "
-                f"pick the most relevant URL and scrape it for deeper content.\n\n"
-                f"Search Results:\n{results['search'][:800]}"
+                f"pick the most relevant URL and use the scrape_url tool to get deeper content.\n\n"
+                f"Only use the scrape_url tool. If scraping fails, summarise what you know from the search results instead.\n\n"
+                f"Search Results:\n{results['search']}"
             )]
         })
         results["reader"] = rr["messages"][-1].content
