@@ -70,15 +70,17 @@ pip install -r requirements.txt
 
 ### 3. Set environment variables
 
-Create a `.env` file in the project root:
+For **local development**, create a `.streamlit/secrets.toml` file:
 
-```env
-# Groq — LLM provider
-GROQ_API_KEY=your_groq_api_key
+```toml
+# Get your key from: https://console.groq.com
+GROQ_API_KEY = "your_groq_api_key"
 
-# Tavily — web search
-TAVILY_API_KEY=your_tavily_api_key
+# Get your key from: https://tavily.com
+TAVILY_API_KEY = "your_tavily_api_key"
 ```
+
+For **Streamlit Cloud**, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ### 4. Run the app
 

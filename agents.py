@@ -6,12 +6,23 @@ from langchain_core.output_parsers import StrOutputParser
 from tools import web_search, scrape_url
 
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
 # Model Setup
-agent_llm = ChatGroq(model='llama-3.3-70b-versatile', temperature=0)
-fast_llm   = ChatGroq(model='llama-3.1-8b-instant',   temperature=0)
+# Use fallback models in case primary ones are unavailable
+try:
+    agent_llm = ChatGroq(model='llama-3.3-70b-versatile', temperature=0)
+except Exception:
+    # Fallback to mixtral if llama-3.3 is not available
+    agent_llm = ChatGroq(model='mixtral-8x7b-32768', temperature=0)
+
+try:
+    fast_llm = ChatGroq(model='llama-3.1-8b-instant', temperature=0)
+except Exception:
+    # Fallback to gemma2 if llama-3.1 is not available
+    fast_llm = ChatGroq(model='gemma2-9b-it', temperature=0)
 
 # First Agent
 

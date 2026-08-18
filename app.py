@@ -1,6 +1,22 @@
 import streamlit as st
 import time
+import os
 from agents import build_reader_agent, build_search_agent, writer_chain, critic_chain
+
+# Check for required API key
+if not os.getenv("GROQ_API_KEY"):
+    st.error(
+        "⚠️ **Missing GROQ_API_KEY**\n\n"
+        "To use ResearchMind, you need to configure your Groq API key:\n\n"
+        "**On Streamlit Cloud:**\n"
+        "1. Go to your app settings (menu → Manage app)\n"
+        "2. Click 'Secrets' in the left sidebar\n"
+        "3. Add: `GROQ_API_KEY = your_groq_api_key_here`\n"
+        "4. Save and redeploy your app\n\n"
+        "**Locally:**\n"
+        "Create a `.streamlit/secrets.toml` file with your key, or set the `GROQ_API_KEY` environment variable."
+    )
+    st.stop()
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -584,47 +600,76 @@ if st.session_state.running and not st.session_state.done:
     results = {}
     topic_val = st.session_state.topic_input
 
-    with st.spinner("Search Agent is working…"):
-        search_agent = build_search_agent()
-        sr = search_agent.invoke({
-            "messages": [("user", f"Find recent, reliable and detailed information about: {topic_val}")]
-        })
-        results["search"] = sr["messages"][-1].content
-        st.session_state.results = dict(results)
+    try:
+        with st.spinner("Search Agent is working…"):
+            search_agent = build_search_agent()
+            sr = search_agent.invoke({
+                "messages": [("user", f"Find recent, reliable and detailed information about: {topic_val}")]
+            })
+            results["search"] = sr["messages"][-1].content
+            st.session_state.results = dict(results)
 
-    with st.spinner("Reader Agent is scraping top resources…"):
-        reader_agent = build_reader_agent()
-        rr = reader_agent.invoke({
-            "messages": [("user",
-                f"Based on the following search results about '{topic_val}', "
-                f"pick the most relevant URL and use the scrape_url tool to get deeper content.\n\n"
-                f"Only use the scrape_url tool. If scraping fails, summarise what you know from the search results instead.\n\n"
-                f"Search Results:\n{results['search']}"
-            )]
-        })
-        results["reader"] = rr["messages"][-1].content
-        st.session_state.results = dict(results)
+        with st.spinner("Reader Agent is scraping top resources…"):
+            reader_agent = build_reader_agent()
+            rr = reader_agent.invoke({
+                "messages": [("user",
+                    f"Based on the following search results about '{topic_val}', "
+                    f"pick the most relevant URL and use the scrape_url tool to get deeper content.\n\n"
+                    f"Only use the scrape_url tool. If scraping fails, summarise what you know from the search results instead.\n\n"
+                    f"Search Results:\n{results['search']}"
+                )]
+            })
+            results["reader"] = rr["messages"][-1].content
+            st.session_state.results = dict(results)
 
-    with st.spinner("Writer is drafting the report…"):
-        research_combined = (
-            f"SEARCH RESULTS:\n{results['search']}\n\n"
-            f"DETAILED SCRAPED CONTENT:\n{results['reader']}"
-        )
-        results["writer"] = writer_chain.invoke({
-            "topic": topic_val,
-            "research": research_combined
-        })
-        st.session_state.results = dict(results)
+        with st.spinner("Writer is drafting the report…"):
+            research_combined = (
+                f"SEARCH RESULTS:\n{results['search']}\n\n"
+                f"DETAILED SCRAPED CONTENT:\n{results['reader']}"
+            )
+            results["writer"] = writer_chain.invoke({
+                "topic": topic_val,
+                "research": research_combined
+            })
+            st.session_state.results = dict(results)
 
-    with st.spinner("Critic is reviewing the report…"):
-        results["critic"] = critic_chain.invoke({
-            "report": results["writer"]
-        })
-        st.session_state.results = dict(results)
+        with st.spinner("Critic is reviewing the report…"):
+            results["critic"] = critic_chain.invoke({
+                "report": results["writer"]
+            })
+            st.session_state.results = dict(results)
 
-    st.session_state.running = False
-    st.session_state.done = True
-    st.rerun()
+        st.session_state.running = False
+        st.session_state.done = True
+        st.rerun()
+
+    except Exception as e:
+        st.session_state.running = False
+        st.session_state.done = False
+        error_msg = str(e)
+        
+        if "NotFoundError" in error_msg or "404" in error_msg or "not found" in error_msg.lower():
+            st.error(
+                f"❌ **Groq Model Not Found**\n\n"
+                f"The configured model is not available or your API key doesn't have access.\n\n"
+                f"**Solutions:**\n"
+                f"1. Verify your `GROQ_API_KEY` is valid and active\n"
+                f"2. Check available models at https://console.groq.com/docs/models\n"
+                f"3. Update the model names in `agents.py` if needed\n\n"
+                f"**Error details:** {error_msg[:200]}"
+            )
+        elif "401" in error_msg or "Unauthorized" in error_msg or "Authentication" in error_msg:
+            st.error(
+                f"❌ **Authentication Failed**\n\n"
+                f"Your Groq API key is invalid or expired.\n\n"
+                f"**On Streamlit Cloud:**\n"
+                f"1. Go to Manage app → Secrets\n"
+                f"2. Update `GROQ_API_KEY` with a valid key from https://console.groq.com\n"
+                f"3. Save and redeploy\n\n"
+                f"**Error:** {error_msg[:200]}"
+            )
+        else:
+            st.error(f"❌ **Error Running Pipeline**\n\n{error_msg}")
 
 
 # ── Results ───────────────────────────────────────────────────────────────────
